@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>CRUD – Supabase wspólna baza</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #eee; }
+    input { padding: 5px; margin: 5px; }
+    button { padding: 5px 10px; margin: 5px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <h2>CRUD – wspólna baza użytkowników (Supabase)</h2>
+
+  <h3>Dodaj użytkownika</h3>
+  <input id="add_id" placeholder="ID">
+  <input id="add_name" placeholder="Imię">
+  <button onclick="createUser()">Dodaj</button>
+
+  <h3>Lista użytkowników</h3>
+  <div id="table"></div>
+
+  <script>
+    // ————— Inicjalizacja Supabase —————
+    const SUPABASE_URL = "https://iwyqkpvbvgvymwuhntof.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3eXFrcHZidmd2eW13dWhudG9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjgzNDcsImV4cCI6MjA3ODgwNDM0N30.e3tP6GRqXsliKn1Nkl9Uc8vueaeFHbM1hGe7nhCrnds";
+
+    const supabase = window.Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ————— Funkcje CRUD —————
+
+    async function refreshTable() {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        console.error("Błąd pobierania danych:", error);
+        return;
+      }
+
+      let html = "<table><tr><th>ID</th><th>Imię</th><th>Akcje</th></tr>";
+      data.forEach(row => {
+        html += `
+          <tr>
+            <td>${row.id}</td>
+            <td><input id="name_${row.id}" value="${row.name || ''}"></td>
+            <td>
+              <button onclick="updateUser(${row.id})">Edytuj</button>
+              <button onclick="deleteUser(${row.id})">Usuń</button>
+            </td>
+          </tr>`;
+      });
+      html += "</table>";
+      document.getElementById("table").innerHTML = html;
+    }
+
+    async function createUser() {
+      const id = document.getElementById("add_id").value;
+      const name = document.getElementById("add_name").value;
+
+      const { data, error } = await supabase
+        .from("users")
+        .insert([{ id: Number(id), name }]);
+
+      if (error) {
+        console.error("Błąd dodawania:", error);
+      } else {
+        document.getElementById("add_id").value = "";
+        document.getElementById("add_name").value = "";
+      }
+      await refreshTable();
+    }
+
+    async function updateUser(id) {
+      const newName = document.getElementById("name_" + id).value;
+
+      const { data, error } = await supabase
+        .from("users")
+        .update({ name: newName })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Błąd aktualizacji:", error);
+      }
+      await refreshTable();
+    }
+
+    async function deleteUser(id) {
+      const { data, error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Błąd usuwania:", error);
+      }
+      await refreshTable();
+    }
+
+    // ————— Inicjalne wczytanie tabeli —————
+    refreshTable();
+
+  </script>
+
+</body>
+</html>
